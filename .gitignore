@@ -1,0 +1,10 @@
+browsergym/webarena_results_fail/
+browsergym/webarena_results/
+browsergym/webarena_data/
+browsergym/workarena_results/
+browsergym/workarena_data/
+webshop/collected_data/
+webshop/results/
+.DS_Store
+webshop/.DS_Store
+browsergym/.DS_Store
