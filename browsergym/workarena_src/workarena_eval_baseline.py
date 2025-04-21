@@ -1,36 +1,40 @@
 import json
 import os
+import sys
 import re
 import subprocess
 import time
+import traceback
+from warnings import warn
 
 from tqdm import tqdm
 import dataclasses
-import browsergym
 import gymnasium as gym
 import browsergym  # register webarena tasks as gym environments
 
+from langchain.schema import HumanMessage, SystemMessage
+from dataclasses import asdict, dataclass, field
+
 from browsergym.experiments import Agent, AbstractAgentArgs
 from browsergym.utils.obs import flatten_axtree_to_str
-import google.generativeai as genai
-from dataclasses import asdict, dataclass, field
-import traceback
-from warnings import warn
-from langchain.schema import HumanMessage, SystemMessage
 from browsergym.utils.obs import flatten_axtree_to_str, flatten_dom_to_str, prune_html
 from browsergym.experiments import Agent, AbstractAgentArgs
-from browsergym.workarena import ALL_WORKARENA_TASKS
+from browsergym.workarena import DASHBOARD_TASKS, FORM_TASKS, KB_TASKS, LIST_TASKS, NAVIGATION_TASKS, SERVICE_CATALOG_TASKS
 
-from utils import add_action_semantic, reformat_action_prompt
-
-import sys
 sys.path.append('./')
+from workarena_src.utils import add_action_semantic, reformat_action_prompt
 from demo_agent.agents.legacy.dynamic_prompting import Flags
 from demo_agent.agents.legacy.utils.chat_api import ChatModelArgs
 from demo_agent.agents.legacy import dynamic_prompting
 from demo_agent.agents.legacy.utils.llm_utils import ParseError, retry
 from demo_agent.agents.legacy.utils.chat_api import ChatModelArgs
 
+ALL_WORKARENA_TASKS = [*DASHBOARD_TASKS, 
+                       *FORM_TASKS, 
+                       *KB_TASKS, 
+                       *LIST_TASKS, 
+                       *NAVIGATION_TASKS, 
+                       *SERVICE_CATALOG_TASKS]
 
 @dataclass
 class GenericAgentArgs(AbstractAgentArgs):

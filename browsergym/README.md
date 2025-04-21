@@ -5,21 +5,14 @@
 
 # Setup
 
-## LLM api keys
-```
-export GEMINI_API_KEY = 'your googleai api key'
-export OPENAI_API_KEY = 'your openai api key'
-export ANTHROPIC_API_KEY = 'your anthropic api key'
-export LLAMA_API_KEY = 'your llama api key (register to deepinfra.ai)'
-```
-
-## Dependencies
 Note that we utilize BrowserGym interface for experiment in WorkArena and WebArena.
 For more details about BrowserGym, click this [link](https://github.com/ServiceNow/BrowserGym).
 ```
 conda create -n browsergym python==3.10
 conda activate browsergym
 pip install -r requirements.txt
+pip install browsergym
+pip install browsergym-workarena
 playwright install
 ```
 Finally, each benchmark comes with its own specific setup that requires to follow additional steps.
@@ -27,14 +20,22 @@ Finally, each benchmark comes with its own specific setup that requires to follo
  - for workarena, see [WorkArena](https://github.com/ServiceNow/WorkArena)
 
 
+Setup API KEYs for LLMs
+```
+export GEMINI_API_KEY = 'your googleai api key'
+export OPENAI_API_KEY = 'your openai api key'
+export ANTHROPIC_API_KEY = 'your anthropic api key'
+export LLAMA_API_KEY = 'your llama api key (register to deepinfra.ai)'
+```
+
 ## Dataset
 We open-source web page contextualization dataset we collected for training the model.
-You may download [webarena_data.zip](), [workarena_data.zip]() here.
+You may download [webarena_data](https://drive.google.com/drive/folders/1SWTpVkzB6z1yvYzjYwNS3UWkOvrPgClb?usp=share_link), [workarena_data.zip](https://drive.google.com/drive/folders/1EIBwJWrB1qvXdtj3iuvj6IveGNB5qerP?usp=share_link) here.
 After download, please unzip the file under the current directory.
 
 ## Trajectory log
 We also open-source the experiment log containing rollout trajectories for ease of analysis.
-You may download [webarena_results.zip](), [workarena_data.zip]() here.
+You may download [webarena_results.zip](https://drive.google.com/drive/folders/1_MzX_GXS03ebx3Gc072TLdQVdUJfdiur?usp=share_link), [workarena_data.zip](https://drive.google.com/drive/folders/1suzmQLeDE4GcgZoPsV8sRE6LBtsEvAB6?usp=share_link) here.
 After download, please unzip the file under the current directory.
 
 # Experiments

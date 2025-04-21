@@ -104,3 +104,7 @@ python src/webshop_lcow_eval.py
 --backbone [bacbone llm]
 ```
 
+### Trajectory log & Dataset
+We open-source webshop contextualization [dataset](https://drive.google.com/drive/folders/1SWTpVkzB6z1yvYzjYwNS3UWkOvrPgClb?usp=share_link) we collected for training the model.
+We also opensource webshop experiment log. You can download [logs](https://drive.google.com/drive/folders/1Y98YTMMkWMs4p9LsZQhf1rxYe6hwqfKj?usp=share_link) regarding our WebShop experiment.
+
