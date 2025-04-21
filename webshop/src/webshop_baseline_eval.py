@@ -12,7 +12,7 @@ from web_agent_site.models import RandomPolicy
 from web_agent_site.utils import DEBUG_PROD_SIZE
 
 from constants import FEW_SHOT_EXAMPLES, FEW_SHOT_EXAMPLES_REPR
-from utils import clean_obs, api_llm_inference, return_meta_prompt_repr_3
+from utils import clean_obs, api_llm_inference, return_self_ctx_prompt
 import json
 import os
 
@@ -52,10 +52,9 @@ def run_baseprompt(args, agent, env):
             action = agent.act(action_prompt)
             # take step
             obs, reward, done, info = env.step(action)
-            ### preprocessing observation ###
+            # preprocessing observation
             obs = clean_obs(obs)
             obs = obs.replace('Instruction:\n'+cleaned_goal+'\n', '')
-            #################################
             print(f'Action: {str(action)}\n\nObservation:\n{str(obs)}\n\n')
             prompt += f'{action}\n\nObservation:\n{obs}\n\nAction: '
             if done:
@@ -108,7 +107,7 @@ def run_selfctx(args, agent, env):
             obs = clean_obs(obs)
             obs = obs.replace('Instruction:\n'+cleaned_goal+'\n', '')
             # Rephrase raw observation based on llm rephraser
-            meta_prompt = return_meta_prompt_repr_3(cleaned_goal, obs, previous_actions)
+            meta_prompt = return_self_ctx_prompt(cleaned_goal, obs, previous_actions)
             obs_repr = api_llm_inference(meta_prompt, args.backbone, max_new_tokens=1024)
             obs_repr = obs_repr.split('**rephrased observation**:')[-1]
             print(f'Action: {action}\n\nObservation:\n{obs_repr}\n\n')

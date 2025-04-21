@@ -1,30 +1,26 @@
 import os
+import sys
 import time
 import json
 import warnings
-import torch
 
 import trl
-from trl import SFTTrainer, DataCollatorForCompletionOnlyLM, SFTConfig
-from accelerate import infer_auto_device_map
+import torch
 import wandb
 import pandas as pd
 import pyarrow as pa
 from datasets import Dataset
 from tqdm import tqdm
+from trl import SFTTrainer, DataCollatorForCompletionOnlyLM, SFTConfig
 
-import sys
 sys.path.append('./')
 from webarena_src.utils import load_hfmodel
-#from hf_eval_rollout import run_eval_multiturn_repr, WebshopAgent
 
 #####################################################################
 def main(cfg):
     # load dataset for training and validation
     train_df = pd.read_csv(f'./webarena_data/sft_train_iter_{cfg.iter}.csv')
     train_dataset = Dataset(pa.Table.from_pandas(train_df))  
-    val_df = pd.read_csv(f'./webarena_data/sft_train_iter_{cfg.iter}.csv')
-    val_dataset = Dataset(pa.Table.from_pandas(train_df))  
     
     # load model and tokenizers
     base_model, tokenizer = load_hfmodel(cfg.model_name) 
@@ -53,7 +49,6 @@ def main(cfg):
         weight_decay=cfg.weight_decay,
         report_to="wandb",
         save_strategy="no",
-        #eval_on_start = True,
         evaluation_strategy="no",
         seed=cfg.seed,
         group_by_length=True,
@@ -87,8 +82,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training contextualization module')
     
     # Add arguments
-    parser.add_argument('--backbone', type=str, help='type of the action model backbone', default='googleai/gemini-1.5-flash-002')
-    parser.add_argument('--iter', type=int, help='iteration for data collection', default=0)
+    parser.add_argument('--backbone', 
+                        type=str, 
+                        help='type of the action model backbone', 
+                        default='googleai/gemini-1.5-flash-002'
+                        )
+    
+    parser.add_argument('--iter', 
+                        type=int, 
+                        help='iteration for data collection', 
+                        default=0
+                        )
+    
     args = parser.parse_args()
 
     run = wandb.init(

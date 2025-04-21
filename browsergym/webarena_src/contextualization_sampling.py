@@ -1,13 +1,12 @@
 import sys
 import re
-from tqdm import tqdm
 import os 
 import json
 import random
 import concurrent.futures
 
 import pandas as pd
-from langchain_community.callbacks import get_openai_callback
+from tqdm import tqdm
 
 from reward_model import action_alignment
 from prompt import format_rephrase_prompt, format_rephrase_prompt_retry, format_action_prompt_for_datacollection
@@ -215,10 +214,9 @@ def main(demo : pd.DataFrame,
 
 
         if max_reward == 0:
-            print('Retry due to lack of valid contextualization / current rewards :', action_matching_rewards)
-            
-            
-            ################## Retry - 1. SAMPLE CANDIDATE REFINEMENT with Action Que  ###################################
+            print('Retry due to lack of valid contextualization / current rewards :', 
+                  action_matching_rewards)
+            ######## Retry - 1. SAMPLE CANDIDATE REFINEMENT with Action Que  #######
             candidates = []
             # format rephrase prompt
             rephrase_prompt, rephrase_system_prompt = format_rephrase_prompt_retry(
@@ -260,7 +258,7 @@ def main(demo : pd.DataFrame,
                 candidates.append({'think': plan, 'obs_repr': rep_observation})
             
             ############################################################################
-            ############################ Compute reward for each candidate #############################
+            ###################### Compute reward for each candidate ###################
             action_matching_reward_lists = []
             pred_action_lists = []
             pred_think_lists = []
@@ -382,14 +380,25 @@ def main(demo : pd.DataFrame,
                             'predicted_action': pred_action_list,
                             'predicted_thought': pred_think_list
                             } 
-                            for (rep, action_matching, action_matching_list, pred_action_list, pred_think_list) in zip(candidates, action_matching_rewards, action_matching_reward_lists, pred_action_lists, pred_think_lists)]
+                            for (rep, 
+                                action_matching, 
+                                action_matching_list, 
+                                pred_action_list, 
+                                pred_think_list
+                                ) in zip(
+                                    candidates, 
+                                    action_matching_rewards, 
+                                    action_matching_reward_lists, 
+                                    pred_action_lists, 
+                                    pred_think_lists)
+                                ]
             }
         
         ####################
         gpt_cost = 2.5*gpt_input_tokens/1e+6 + 10*gpt_output_tokens/1e+6
         genai_cost = 0.15*genai_input_tokens/1e+6 + 1*genai_output_tokens/1e+6
         ant_cost = 3*ant_input_tokens/1e+6 + 15*ant_output_tokens/1e+6
-        total_cost = gpt_cost + genai_cost + ant_cost #+ ant_cost
+        total_cost = gpt_cost + genai_cost + ant_cost
         print(f'Estimated GPT cost: ${gpt_cost}')
         print(f'Estimated GENINI cost: ${genai_cost}')
         print(f'Estimated CLAUDE cost: ${ant_cost}')

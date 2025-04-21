@@ -6,7 +6,7 @@ import pandas as pd
 import transformers
 from transformers import AutoTokenizer
 
-from prompt_v2 import hf_format_rephrase_prompt
+from prompt import hf_format_rephrase_prompt
 from utils import add_action_semantic
 
 
@@ -14,15 +14,17 @@ def create_sft_dataset(data):
     tokenizer = AutoTokenizer.from_pretrained(
         "meta-llama/Meta-Llama-3.1-8B-Instruct"
         )
-    df = {'text': [], 
-          'reward': [], 
-          'reward_spec':[], 
-          'input': [], 
-          'output': [], 
-          'task_id': [], 
-          'step': [], 
-          'history':[], 
-          'gt_action':[]}
+    df = {
+        'text': [], 
+        'reward': [], 
+        'reward_spec':[], 
+        'input': [], 
+        'output': [], 
+        'task_id': [], 
+        'step': [], 
+        'history':[], 
+        'gt_action':[]
+        }
     
     sample_loc = []
     for sample in data:

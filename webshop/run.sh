@@ -1,1 +1,0 @@
-CUDA_VISIBLE_DEVICES=0,1,2,3 python src/hf_eval_rollout.py --multiturn --rephrase --ckpt_step 1940

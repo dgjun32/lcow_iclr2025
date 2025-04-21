@@ -451,58 +451,6 @@ fill('a12', 'example with "quotes"')
     return action_prompt
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-def hf_format_rephrase_prompt_v2(domain_info, goal, history, observation, action):
-    rephrase_system_prompt = f'''You are an agent tasked with extracting and rephrasing a subset of the webpage's observations based on the content of the page and user instructions. 
-'''
-
-    rephrase_prompt = f'''[General instructions]
-You are currently on the {domain_info} website.
-Your task is to generate a "Reasoning" and a "Refined observation" based on the provided inputs.
-
-First, review the "User instruction" and "History of interactions" and, then, generate the "Reasoning".
-Analyze the progress made so far, and provide a rationale for the next steps needed to efficiently accomplish the user instruction on the {domain_info} website.
-
-Second, refine the "AXTree observation at the current time step" into a "Refined observation".
-Select a subset of the AXTree observation that is essential for completing the user instruction and provide explanations for the corresponding elements in the selected subset.
-
-You may refer to the Hints, which consists of the ground truth next action, but do not explicitly mention these hints in your output.
-
-[Information source]
-# User instruction
-{goal}
-
-# History of interactions
-{history}
-
-# AXTree observation at the current time step
-{observation}
-
-# Hint
-## Ground-truth next action
-{action}
-'''
-    return rephrase_prompt, rephrase_system_prompt
-
-
-
-
-
-
-
-
-
 ####################### Action Prompt for self-rephrasing #################################
 def format_action_prompt(instruction, history, plan, rep_observation):
     action_prompt = f'''
@@ -661,9 +609,7 @@ fill('a12', 'example with "quotes"')
 ############################################### prompt for rephrase data collection ##########################
 
 
-############ Rephrase prompt for WebArena rephrase data collection ####################################
-
-
+############ Rephrase prompt for WebArena rephrase data collection ###################################
 
 def wa_format_action_prompt_for_datacollection_iter(goal, history, rep_observation):
     action_system_prompt = f'''You are an agent trying to solve a web task based on the content of the page anda user instructions. 

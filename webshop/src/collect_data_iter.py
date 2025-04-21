@@ -1,22 +1,32 @@
 import os 
+import json
+import concurrent
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
-from constants import FEW_SHOT_EXAMPLES_3_REPR, FEW_SHOT_EXAMPLES_REPR
-import json
 from tqdm import tqdm 
-from concurrent.futures import ThreadPoolExecutor
-from utils import hf_convert_obs_in_history_inputs_v2, hf_llm_batch_rephrase, return_meta_prompt_repr_3_hf
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
-import concurrent
+
+from utils import hf_convert_obs_in_history_inputs, hf_llm_batch_rephrase, return_lcow_prompt
+from constants import FEW_SHOT_EXAMPLES_3_REPR, FEW_SHOT_EXAMPLES_REPR
 
 
 class TrainDataset(Dataset):
     def __init__(self, args):
-        demo_df = pd.read_csv('collected_data/train_demo.csv')[['traj_id', 'obs', 'obs_history', 'action', 'prev_actions', 'goal', 'reward']]
+        demo_df = pd.read_csv('collected_data/train_demo.csv')[
+            ['traj_id', 
+             'obs', 
+             'obs_history', 
+             'action', 
+             'prev_actions', 
+             'goal', 
+             'reward']
+            ]
         demo_df['type'] = ['expertdemo']*len(demo_df)
         traj_df = pd.read_csv(f'collected_data/collected_traj_traintask_iter_{args.iter}.csv')
         traj_df = traj_df.rename(columns = {'task_id':'traj_id'})
@@ -50,7 +60,7 @@ def format_reward_prompt(
     system_prompt
     ):
     
-    prompt = hf_convert_obs_in_history_inputs_v2(
+    prompt = hf_convert_obs_in_history_inputs(
         model, 
         tokenizer, 
         obs_history, 
@@ -143,7 +153,14 @@ def reward_model(model, tokenizer, obs_histories, obs_reprs, actions, system_pro
         pass
     else:
         for obs_history, obs_repr, action in zip(obs_histories, obs_reprs, actions):
-            action_matching_reward_list, pred_actions = compute_action_matching_reward(model, tokenizer, obs_history, obs_repr, action, system_prompt)
+            action_matching_reward_list, pred_actions = compute_action_matching_reward(
+                model, 
+                tokenizer, 
+                obs_history, 
+                obs_repr, 
+                action, 
+                system_prompt
+                )
             action_matching_reward = sum(action_matching_reward_list)
             action_matching_rewards.append(action_matching_reward)
             pred_actions_list.append(pred_actions)
@@ -186,8 +203,12 @@ def collect_data(args, model, tokenizer, num_candidates):
             pass 
         else:
             # sample multiple rephrase candidates
-            lm_input, rephrase_system_prompt = return_meta_prompt_repr_3_hf(goal, obs, prev_actions)
-            obs_reprs = hf_llm_batch_rephrase(model, tokenizer, [lm_input]*num_candidates, rephrase_system_prompt) 
+            lm_input, rephrase_system_prompt = return_lcow_prompt(goal, obs, prev_actions)
+            obs_reprs = hf_llm_batch_rephrase(model, 
+                                              tokenizer, 
+                                              [lm_input]*num_candidates, 
+                                              rephrase_system_prompt
+                                              ) 
             rewards, pred_actions_list = reward_model(
                                     model,
                                     tokenizer,

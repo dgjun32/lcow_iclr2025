@@ -1,24 +1,23 @@
-# SFT dataset
-
-import pandas as pd
+import sys
 import json
+import pandas as pd
 import transformers 
 from transformers import AutoTokenizer
-import sys
-from utils import return_meta_prompt_repr_3_hf
+
+from utils import return_lcow_prompt
 sys.path.append('./')
 
 
 
 if __name__ == '__main__':
-    with open('collected_data/rephrase_data_iter_0.json', 'r') as f:
+    with open('collected_data/sampled_contextualization_iter_0.json', 'r') as f:
         data = json.load(f)
     tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3-mini-128k-instruct")
     df = {'text': [], 
-            'obs': [], 
-            'rephrase':[], 
-            'action':[],
-            'reward':[]}
+        'obs': [], 
+        'rephrase':[], 
+        'action':[],
+        'reward':[]}
 
     for sample in data:
         # get src observation
@@ -27,16 +26,14 @@ if __name__ == '__main__':
         goal = sample['goal']
         action = sample['action']
         src_obs = obs.replace('Instruction:\n'+goal+'\n', '')
-        prompt, system_prompt = return_meta_prompt_repr_3_hf(goal, src_obs, prev_actions)
+        prompt, system_prompt = return_lcow_prompt(goal, src_obs, prev_actions)
         
         # get rep observation with maximum reward
         candidates = sample['candidates']
-        #possible = any(item['action_matching']+item['reasoning_action_alignment']+item['extraction_action_alignment'] == 3.0 for item in candidates)
         possible = any(item['action_matching'] > 0.0 for item in candidates)
         if not possible:
             pass
         else:
-            #rep_obs = max(sample['candidates'], key=lambda x: x['action_matching']+x['reasoning_action_alignment']+x['extraction_action_alignment'])['rephrase']
             key = max(sample['candidates'], key=lambda x: x['action_matching'])
             rep_obs = key['rephrase']
             rep_obs = rep_obs + '\n[END]'

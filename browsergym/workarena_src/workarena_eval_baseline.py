@@ -1,13 +1,15 @@
-import dataclasses
-import browsergym
-import gymnasium as gym
-import browsergym  # register webarena tasks as gym environments
-from tqdm import tqdm
 import json
 import os
 import re
 import subprocess
 import time
+
+from tqdm import tqdm
+import dataclasses
+import browsergym
+import gymnasium as gym
+import browsergym  # register webarena tasks as gym environments
+
 from browsergym.experiments import Agent, AbstractAgentArgs
 from browsergym.utils.obs import flatten_axtree_to_str
 import google.generativeai as genai

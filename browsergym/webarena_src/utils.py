@@ -24,8 +24,10 @@ def load_hfmodel(ckpt=None):
     base_model.config.pretraining_tp = 1 
     base_model = base_model.float()
 
-    tokenizer = AutoTokenizer.from_pretrained(path,
-                                            trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        path,
+        trust_remote_code=True
+        )
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
     tokenizer.add_eos_token = True

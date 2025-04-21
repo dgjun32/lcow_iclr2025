@@ -2,27 +2,26 @@ import json
 import os
 import sys
 import time
+import traceback
+from warnings import warn
+
+import torch
 from tqdm import tqdm
 import gymnasium as gym
 import browsergym.webarena  # register webarena tasks as gym environments
-import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from browsergym.experiments import Agent, AbstractAgentArgs
 from browsergym.utils.obs import flatten_axtree_to_str
 from dataclasses import asdict, dataclass, field
-import traceback
-from warnings import warn
-from langchain.schema import HumanMessage, SystemMessage, AIMessage
+from langchain.schema import HumanMessage, SystemMessage
 from browsergym.core.action.base import AbstractActionSet
 from browsergym.utils.obs import flatten_axtree_to_str, flatten_dom_to_str, prune_html
 from browsergym.experiments import Agent, AbstractAgentArgs
 
-from prompt import hf_format_rephrase_prompt, hf_format_action_prompt
-from utils import load_hfmodel, hf_llm_rephrase, add_action_semantic, remove_all_error_logs, reformat_action_prompt
-import time
-
 sys.path.append('./')
+from webarena_src.prompt import hf_format_rephrase_prompt, hf_format_action_prompt
+from webarena_src.utils import load_hfmodel, hf_llm_rephrase, add_action_semantic, remove_all_error_logs, reformat_action_prompt
 from demo_agent.agents.legacy.dynamic_prompting import Flags
 from demo_agent.agents.legacy.utils.chat_api import ChatModelArgs
 from demo_agent.agents.legacy import dynamic_prompting

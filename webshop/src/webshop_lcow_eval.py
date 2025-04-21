@@ -4,14 +4,15 @@ import re
 import os
 import sys
 import time
+
 import gym
+import torch
 import numpy as np
+import google.generativeai as genai
+
 from rich.markup import escape
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
 from tqdm import tqdm
-
-import google.generativeai as genai
 
 sys.path.append('./')
 from web_agent_site.envs import WebAgentTextEnv
@@ -19,9 +20,7 @@ from web_agent_site.models import RandomPolicy
 from web_agent_site.utils import DEBUG_PROD_SIZE
 
 from src.constants import FEW_SHOT_EXAMPLES_REPR
-from src.utils import clean_obs, api_llm_inference, hf_llm_rephrase, return_meta_prompt_repr_3_hf 
-
-from peft import PeftModel
+from src.utils import clean_obs, api_llm_inference, hf_llm_rephrase, return_lcow_prompt
 
 class WebshopAgent:
     def __init__(self, few_shot_examples, backbone):
@@ -37,12 +36,7 @@ class WebshopAgent:
         action = re.sub(r'\s+\]', ']', action)
         return action
 
-def load_hfmodel(ckpt=None):
-    if ckpt == None:
-        path = ''
-    else:
-        path = ckpt
-
+def load_hfmodel(path):
     base_model = AutoModelForCausalLM.from_pretrained(
         path,
         device_map="auto",
@@ -64,21 +58,21 @@ def load_hfmodel(ckpt=None):
 
     return base_model, tokenizer
 
-def run_eval_multiturn_repr(args, 
-                            num_tasks, 
-                            agent, 
-                            env, 
-                            rephraser=None, 
-                            rephraser_tok=None, 
-                            validation=None):
-    
-    if (rephraser is None) and (rephraser_tok is None):
+def run_eval_lcow(
+                args, 
+                num_tasks, 
+                agent, 
+                env, 
+                contextualizer=None, 
+                tokenizer=None, 
+                validation=None
+                ):
+    if (contextualizer is None) and (tokenizer is None):
         
         base_ckpt_path = f"ckpt/sft_iter_{args.iter}/checkpoint-{args.ckpt_step}"
-        rephraser, rephraser_tok = load_hfmodel(base_ckpt_path)
-        rephraser = rephraser.type(torch.bfloat16)
-        
-        rephraser_tok.padding_side='right'     
+        contextualizer, tokenizer = load_hfmodel(base_ckpt_path)
+        contextualizer = contextualizer.type(torch.bfloat16) 
+        tokenizer.padding_side='right'     
     
     rewards = []
     rollouts = []
@@ -108,9 +102,14 @@ def run_eval_multiturn_repr(args,
             obs = clean_obs(obs)
             obs = obs.replace('Instruction:\n'+cleaned_goal+'\n', '')
             # rephrase observation
-            meta_prompt, system_prompt = return_meta_prompt_repr_3_hf(cleaned_goal, obs, previous_actions)
-            obs_repr = hf_llm_rephrase(rephraser, rephraser_tok, meta_prompt, system_prompt)
-            # parse the repharased observation
+            meta_prompt, system_prompt = return_lcow_prompt(cleaned_goal, obs, previous_actions)
+            obs_repr = hf_llm_rephrase(
+                contextualizer, 
+                tokenizer, 
+                meta_prompt, 
+                system_prompt
+                )
+            # parse the contextualized observation
             obs_repr = obs_repr.split('[END]')[0]
             print(f'Action: {str(action)}\n\nObservation:\n{str(obs_repr)}\n\n')
             prompt += f'{action}\n\nObservation:\n{obs_repr}\n\nAction: '
@@ -124,7 +123,6 @@ def run_eval_multiturn_repr(args,
                 prev_actions_li.append(previous_actions)
             if trial > 0:
                 action_li.append(action)
-            ###########################
             if done:
                 rewards.append(reward)
                 break
@@ -135,7 +133,6 @@ def run_eval_multiturn_repr(args,
         if validation is None:
             rollouts.append({'rollout': prompt, 'reward': reward})
             print('Rewards: ', rewards)
-            # save log
             
             with open(f'results/expert_iter_{args.iter}_{args.backbone.split("/")[-1]}.json', 'w') as f:
                 json.dump(rollouts, f, indent=4)
@@ -160,7 +157,7 @@ if __name__ == '__main__':
     
     # Add arguments
     parser.add_argument('--num_tasks', type=int, help='number of the episodes to evaluate')
-    parser.add_argument('--backbone', type=str, default='gemini-pro', help='type of backbone LLM api')
+    parser.add_argument('--backbone', type=str, default='gemini-pro', help='type of backbone LLM')
     parser.add_argument('--ckpt_step', type=int)
     parser.add_argument('--iter', type=int)
     args = parser.parse_args()
@@ -168,7 +165,6 @@ if __name__ == '__main__':
     env = gym.make('WebAgentTextEnv-v0', observation_mode='text_rich', num_products=DEBUG_PROD_SIZE)
 
     agent = WebshopAgent(FEW_SHOT_EXAMPLES_REPR, args.backbone)
-    run_eval_multiturn_repr(args, args.num_tasks, agent, env)
-            
+    run_eval_lcow(args, args.num_tasks, agent, env)
         
 

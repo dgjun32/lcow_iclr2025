@@ -1,25 +1,27 @@
+
+import os
+import sys
+import re
+import json
+import subprocess
+import time
+import traceback
+from warnings import warn
+
 import dataclasses
 import browsergym
 import gymnasium as gym
-import browsergym  # register webarena tasks as gym environments
+import browsergym
 from tqdm import tqdm
-import json
-import os
-import re
-import subprocess
-import time
 from browsergym.experiments import Agent, AbstractAgentArgs
 from browsergym.utils.obs import flatten_axtree_to_str
 from dataclasses import asdict, dataclass, field
-import traceback
-from warnings import warn
 from langchain.schema import HumanMessage, SystemMessage
 from browsergym.utils.obs import flatten_axtree_to_str, flatten_dom_to_str, prune_html
 from browsergym.experiments import Agent, AbstractAgentArgs
 
 from utils import add_action_semantic, reformat_action_prompt
 
-import sys
 sys.path.append('./')
 from demo_agent.agents.legacy.dynamic_prompting import Flags
 from demo_agent.agents.legacy.utils.chat_api import ChatModelArgs
@@ -42,7 +44,6 @@ class GenericAgentArgs(AbstractAgentArgs):
         )
 
 class GenericAgent(Agent):
-
     def obs_preprocessor(self, obs: dict) -> dict:
         """
         Augment observations with text HTML and AXTree representations, which will be stored in
@@ -109,8 +110,6 @@ does not support vision. Disabling use_screenshot."""
             thoughts=self.thoughts,
             flags=self.flags,
         )
-
-        # Determine the minimum non-None token limit from prompt, total, and input tokens, or set to None if all are None.
         maxes = (
             self.flags.max_prompt_tokens,
             self.chat_model_args.max_total_tokens,
@@ -198,17 +197,15 @@ if __name__ == '__main__':
             enable_chat=False,
             demo_mode="default",
             html_type='dom_txt',
-
         )
 
     chat_model_args = ChatModelArgs(
-                model_name=args.backbone,#'openai/gpt-4o-2024-05-13',#'googleai/gemini-1.5-flash-latest',
-                max_total_tokens=128_000,  # "Maximum total tokens for the chat model."
-                max_input_tokens=126_488,  # "Maximum tokens for the input to the chat model."
+                model_name=args.backbone,
+                max_total_tokens=128_000,
+                max_input_tokens=126_488,
                 max_new_tokens=2_000,
                 temperature = 0.0,
- # "Maximum total tokens for the chat model."
-            )
+                )
 
     if not os.path.exists(f'workarena_results/{args.backbone.split("/")[-1]}_baseline/'):
         os.makedirs(f'workarena_results/{args.backbone.split("/")[-1]}_baseline/')
@@ -226,17 +223,7 @@ if __name__ == '__main__':
             print('task: ', task_idx)
             agent = GenericAgentArgs(chat_model_args=chat_model_args, flags=flags).make_agent()
             env = gym.make(f"browsergym/webarena.{task_idx}", headless=True)
-            ############## reset environment #############################
-            for attempt in range(10):
-                try:
-                    obs, info = env.reset()
-                    # If no error occurs, break out of the loop
-                    break
-                except Exception as e:
-                    # If the max number of attempts is reached, raise the error
-                    if attempt == 9:
-                        raise e
-            #############################################################
+            obs, info = env.reset()
             goal = obs['goal'] 
             terminated = False
             actions = []

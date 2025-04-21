@@ -5,20 +5,18 @@ import json
 import warnings
 from tqdm import tqdm
 
-import torch
-import torch.distributed as dist
-from transformers import TrainingArguments, TrainerCallback
-import peft 
-import trl
-from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 import wandb
 import pandas as pd
 import pyarrow as pa
+import torch
+import torch.distributed as dist
 from datasets import Dataset
+from transformers import TrainingArguments, TrainerCallback
+from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 
-sys.path.append('./')
 from utils import load_hfmodel
 
+sys.path.append('./')
 
 def main(cfg):
     # load dataset for training and validation

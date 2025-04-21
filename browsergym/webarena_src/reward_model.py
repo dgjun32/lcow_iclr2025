@@ -1,8 +1,6 @@
-
+import sys
 from langchain.schema import SystemMessage, HumanMessage
 
-################# Evaluation for Action Matching ##############################
-import sys
 sys.path.append('./')
 from demo_agent.agents.legacy.utils.chat_api import ChatModelArgs
 
@@ -42,10 +40,10 @@ Feedback:
 
 def action_alignment(pred_action, ref_action):
     eval_model_args = ChatModelArgs(
-                model_name='openai/gpt-4o-2024-08-06',#'googleai/gemini-1.5-flash-latest',
-                max_total_tokens=128_000,  # "Maximum total tokens for the chat model."
-                max_input_tokens=126_488,  # "Maximum tokens for the input to the chat model."
-                max_new_tokens=2_000,  # "Maximum total tokens for the chat model."
+                model_name='openai/gpt-4o-2024-08-06',
+                max_total_tokens=128_000, 
+                max_input_tokens=126_488,  
+                max_new_tokens=2_000,
                 temperature = 0.0,
                 top_p = 1e-8
             )

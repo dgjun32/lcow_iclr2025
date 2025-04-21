@@ -1,24 +1,27 @@
-import google.generativeai as genai
-import openai
+import os
+import re
+import json
 import sys
 import time
+
 import gym
+import torch
+import openai
 import pandas as pd
 import numpy as np
+import google.generativeai as genai
+
 from rich.markup import escape
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
 from tqdm import tqdm
+
 sys.path.append('./')
 from web_agent_site.envs import WebAgentTextEnv
 from web_agent_site.models import RandomPolicy
 from web_agent_site.utils import DEBUG_PROD_SIZE
 
 from src.constants import FEW_SHOT_EXAMPLES_REPR
-from src.utils import clean_obs, api_llm_inference, hf_llm_rephrase, return_meta_prompt_repr_3_hf 
-import json
-import re
-import os
+from src.utils import clean_obs, api_llm_inference, hf_llm_rephrase, return_lcow_prompt 
 
 
 class WebshopAgent:
@@ -31,30 +34,37 @@ class WebshopAgent:
         prompt = self.few_shot_prompt + '\n' + input
         action = api_llm_inference(prompt, self.backbone, max_new_tokens=50)
         action = action.lower().split('\n')[0].split('action:')[-1].strip()
-        action = re.sub(r'\[\s+', '[', action)  # Removes space after [
+        action = re.sub(r'\[\s+', '[', action)
         action = re.sub(r'\s+\]', ']', action)
         return action
     
 
-def run_eval_multiturn_repr(args, 
+def run_trajectory_collection(
+                            args, 
                             num_tasks, 
                             agent,
                             env,
                             rephraser=None, 
                             rephraser_tok=None, 
-                            validation=None):
+                            validation=None
+                            ):
     
     if (rephraser is None) and (rephraser_tok is None):
         # load fine-tuned checkpoint
         ckpt_path = f'ckpt/sft_iter_{args.iter-1}/checkpoint-{args.ckpt_step}'
-        rephraser = AutoModelForCausalLM.from_pretrained(ckpt_path,
-                                                        device_map='auto',
-                                                        torch_dtype = torch.bfloat16,
-                                                        attn_implementation='flash_attention_2',
-                                                        trust_remote_code=True,
-                                                        use_auth_token=True)
+        rephraser = AutoModelForCausalLM.from_pretrained(
+            ckpt_path,
+            device_map='auto',
+            torch_dtype = torch.bfloat16,
+            attn_implementation='flash_attention_2',
+            trust_remote_code=True,
+            use_auth_token=True
+            )
         rephraser = rephraser.type(torch.bfloat16)
-        rephraser_tok = AutoTokenizer.from_pretrained(ckpt_path, trust_remote_code=True)
+        rephraser_tok = AutoTokenizer.from_pretrained(
+            ckpt_path, 
+            trust_remote_code=True
+            )
         rephraser_tok.padding_side='right'
     
     rewards = []
@@ -92,7 +102,7 @@ def run_eval_multiturn_repr(args,
             obs = clean_obs(obs)
             obs = obs.replace('Instruction:\n'+cleaned_goal+'\n', '')
             # rephrase observation
-            meta_prompt, system_prompt = return_meta_prompt_repr_3_hf(cleaned_goal, obs, previous_actions)
+            meta_prompt, system_prompt = return_lcow_prompt(cleaned_goal, obs, previous_actions)
             obs_repr = hf_llm_rephrase(rephraser, rephraser_tok, meta_prompt, system_prompt)
             # parse the repharased observation
             obs_repr = obs_repr.split('[END]')[0]
@@ -154,12 +164,7 @@ if __name__ == '__main__':
     parser.add_argument('--ckpt_step', type=int)
     parser.add_argument('--iter', type=int, help='iteration for data collection', default=1)
     args = parser.parse_args()
-
+    
     env = gym.make('WebAgentTextEnv-v0', observation_mode='text_rich', num_products=DEBUG_PROD_SIZE)
-
     agent = WebshopAgent(FEW_SHOT_EXAMPLES_REPR, args.backbone)
-    run_eval_multiturn_repr(args, args.num_tasks, agent, env)
-
-            
-        
-
+    run_trajectory_collection(args, args.num_tasks, agent, env)

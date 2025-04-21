@@ -3,14 +3,14 @@ import os
 import re
 import time
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria
 import torch
+import openai
+from openai import OpenAI
+from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria
 from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
-import openai
-from openai import OpenAI
 
 
 
@@ -28,7 +28,7 @@ Second, extract a few relevant elements based on your high-level reasoning.'''
 
 
 # meta prompt for Rephraser LM
-def return_meta_prompt_repr_3_hf(goal, obs, previous_actions):
+def return_lcow_prompt(goal, obs, previous_actions):
     rephrase_system_prompt = f'''You are an agent tasked with extracting and rephrasing a subset of the webpage's observations based on the content of the page and user instructions. 
 '''
 
@@ -55,7 +55,7 @@ Select a subset of the AXTree observation that is necessary for completing the u
     return rephrase_prompt, rephrase_system_prompt
 
 
-def return_meta_prompt_repr_3(goal, obs, previous_actions):
+def return_self_ctx_prompt(goal, obs, previous_actions):
     prompt = f'''
 The current webpage on the web shopping site is described in the observation.
 Evaluate the current progress based on previous actions and current observation.
@@ -217,7 +217,7 @@ Here is the task.
 
 ##### Utils functions for rephrasing observations in the "interaction history of observation and action e.g., (o_1, a_1, o_2, a_2, ..., o_t)"
 
-def convert_obs_in_history_examples_v2(few_shot, backbone):
+def convert_obs_in_history_examples(few_shot, backbone):
     goal = few_shot.split('Instruction:\n')[-1].split('\n')[0]
     # extract all observations in history
     observations = re.findall(r'Observation:\s+(.*?)\n\nAction:', few_shot, re.DOTALL)
@@ -228,7 +228,7 @@ def convert_obs_in_history_examples_v2(few_shot, backbone):
     previous_actions = ''
     for i, (obs, action) in enumerate(zip(observations, actions)):
         previous_actions += f'{i+1}. {action}\n'
-        meta_prompt = return_meta_prompt_repr_3(goal, obs, previous_actions)
+        meta_prompt = return_self_ctx_prompt(goal, obs, previous_actions)
         obs_repr = api_llm_inference(meta_prompt, backbone, max_new_tokens=1000)
         rephrased_observations.append(obs_repr)
 
@@ -240,7 +240,7 @@ def convert_obs_in_history_examples_v2(few_shot, backbone):
     return new_few_shot
 
 
-def convert_obs_in_history_inputs_v2(history, cur_obs_repr, backbone):
+def convert_obs_in_history_inputs(history, cur_obs_repr, backbone):
     goal = history.split('Instruction:\n')[-1].split('\n')[0]
     # extract all observations in history
     observations = re.findall(r'Observation:\s+(.*?)\n\nAction:', history, re.DOTALL)
@@ -251,7 +251,7 @@ def convert_obs_in_history_inputs_v2(history, cur_obs_repr, backbone):
     previous_actions = ''
     for i, (obs, action) in enumerate(zip(observations, actions)):
         previous_actions += f'{i+1}. {action}\n'
-        meta_prompt = return_meta_prompt_repr_3(goal, obs, previous_actions)
+        meta_prompt = return_self_ctx_prompt(goal, obs, previous_actions)
         obs_repr = api_llm_inference(meta_prompt, backbone, max_new_tokens=1000)
         rephrased_observations.append(obs_repr)
     if len(rephrased_observations) >= 1:
@@ -265,7 +265,7 @@ def convert_obs_in_history_inputs_v2(history, cur_obs_repr, backbone):
     return new_few_shot
 
 
-def hf_convert_obs_in_history_examples_v2(base_model, tokenizer, few_shot):
+def hf_convert_obs_in_history_examples(base_model, tokenizer, few_shot):
     goal = few_shot.split('Instruction:\n')[-1].split('\n')[0]
     # extract all observations in history
     observations = re.findall(r'Observation:\s+(.*?)\n\nAction:', few_shot, re.DOTALL)
@@ -276,7 +276,7 @@ def hf_convert_obs_in_history_examples_v2(base_model, tokenizer, few_shot):
     previous_actions = ''
     for i, (obs, action) in enumerate(zip(observations, actions)):
         previous_actions += f'{i+1}. {action}\n'
-        meta_prompt = return_meta_prompt_repr_3_hf(goal, obs, previous_actions)
+        meta_prompt = return_lcow_prompt(goal, obs, previous_actions)
         obs_repr = hf_llm_rephrase(base_model, tokenizer, meta_prompt)
         rephrased_observations.append(obs_repr)
 
@@ -288,7 +288,7 @@ def hf_convert_obs_in_history_examples_v2(base_model, tokenizer, few_shot):
     return new_few_shot
 
 
-def hf_convert_obs_in_history_inputs_v2(base_model, tokenizer, history, cur_obs_repr, system_prompt):
+def hf_convert_obs_in_history_inputs(base_model, tokenizer, history, cur_obs_repr, system_prompt):
     '''
     history: interaction history where the observation is not rephrased
     cur_obs_repr: rephrased current observation
@@ -303,7 +303,7 @@ def hf_convert_obs_in_history_inputs_v2(base_model, tokenizer, history, cur_obs_
     previous_actions = ''
     for i, (obs, action) in enumerate(zip(observations, actions)):
         previous_actions += f'{i+1}. {action}\n'
-        meta_prompt, system_prompt = return_meta_prompt_repr_3_hf(goal, obs, previous_actions)
+        meta_prompt, system_prompt = return_lcow_prompt(goal, obs, previous_actions)
         obs_repr = hf_llm_rephrase(base_model, tokenizer, meta_prompt, system_prompt)
         rephrased_observations.append(obs_repr)
     if len(rephrased_observations) >= 1:
@@ -377,8 +377,6 @@ def api_llm_inference(prompt, model_name, max_new_tokens):
     return output
     
 
-
-    
 ############################# Utils functions for Huggingface LLM inference ###########################
 
 def load_hfmodel(ckpt=None):

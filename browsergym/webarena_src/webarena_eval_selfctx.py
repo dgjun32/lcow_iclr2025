@@ -1,29 +1,28 @@
-import dataclasses
-import browsergym
-import gymnasium as gym
-import browsergym.webarena  # register webarena tasks as gym environments
 import time 
 import json
 import os
 import re
-import subprocess
 import time
+import sys
+import traceback
+from warnings import warn
+
 import tqdm
+import dataclasses
+import browsergym
+import gymnasium as gym
+import browsergym.webarena  # register webarena tasks as gym environments
 from tqdm import tqdm
 from browsergym.experiments import Agent, AbstractAgentArgs
 from browsergym.utils.obs import flatten_axtree_to_str
-import google.generativeai as genai
 from dataclasses import asdict, dataclass, field
-import traceback
-from warnings import warn
 from langchain.schema import HumanMessage, SystemMessage, AIMessage
 from browsergym.utils.obs import flatten_axtree_to_str, flatten_dom_to_str, prune_html
 from browsergym.experiments import Agent, AbstractAgentArgs
-from prompt_v2 import format_rephrase_prompt, format_action_prompt
-from utils import remove_all_error_logs, add_action_semantic, reformat_action_prompt
 
-import sys
 sys.path.append('./')
+from webarena_src.prompt import format_rephrase_prompt, format_action_prompt
+from webarena_src.utils import remove_all_error_logs, add_action_semantic, reformat_action_prompt
 from demo_agent.agents.legacy.dynamic_prompting import Flags
 from demo_agent.agents.legacy.utils.chat_api import ChatModelArgs
 from demo_agent.agents.legacy import dynamic_prompting
@@ -157,11 +156,12 @@ does not support vision. Disabling use_screenshot."""
         num_output_tokens = 0
         ######## 1. get reasoning from the reasoner LM ################ 
     
-        rephrase_prompt, rephrase_system_prompt = format_rephrase_prompt(domain_info, 
-                                                                        goal, 
-                                                                        '\n'.join(remove_all_error_logs(history).split('\n')[1:]).strip(), 
-                                                                        '\n'.join(observation.split('\n')[1:]).strip()
-                                                                        )
+        rephrase_prompt, rephrase_system_prompt = format_rephrase_prompt(
+            domain_info, 
+            goal, 
+            '\n'.join(remove_all_error_logs(history).split('\n')[1:]).strip(), 
+            '\n'.join(observation.split('\n')[1:]).strip()
+            )
         
         chat_messages = [
             SystemMessage(content=rephrase_system_prompt),
@@ -237,9 +237,7 @@ does not support vision. Disabling use_screenshot."""
         except:
             think = None
         semantic_action = add_action_semantic(action, prompt)
-        #think_action = f'think: {think}\naction: {semantic_action}'
         self.actions.append(semantic_action)
-        #self.actions.append(ans_dict["action"])
         self.memories.append(ans_dict.get("memory", None))
         self.thoughts.append(ans_dict.get("think", None))
 
@@ -254,9 +252,19 @@ does not support vision. Disabling use_screenshot."""
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='arguments for Webshop Evaluation using Fine-tuned Rephraser LM')
-    # Add argumen
-    parser.add_argument('--backbone', type=str, help='type of the backbone', default='googleai/gemini-1.5-flash-latest')
-    parser.add_argument('--max_steps', type=int, help='number of the maximum steps', default=10)
+    # Add arguments
+    parser.add_argument('--backbone', 
+                        type=str, 
+                        help='type of the backbone', 
+                        default='googleai/gemini-1.5-flash-latest'
+                        )
+    
+    parser.add_argument('--max_steps', 
+                        type=int, 
+                        help='number of the maximum steps', 
+                        default=10
+                        )
+    
     args = parser.parse_args() 
     
     
@@ -279,7 +287,6 @@ if __name__ == '__main__':
             enable_chat=False,
             demo_mode="default",
             html_type='dom_txt',
-
         )
 
 
@@ -304,19 +311,13 @@ if __name__ == '__main__':
         try:
             print('task: ', task_idx)
             env = gym.make(f"browsergym/webarena.{task_idx}", headless=True)
-            ############## reset environment #############################
-            for attempt in range(10):
-                try:
-                    obs, info = env.reset()
-                    # If no error occurs, break out of the loop
-                    break
-                except Exception as e:
-                    # If the max number of attempts is reached, raise the error
-                    if attempt == 9:
-                        raise e
-            #############################################################
+            obs, info = env.reset()
             goal = obs['goal']
-            agent = GenericAgentArgs(chat_model_args=chat_model_args, flags=flags).make_agent(goal=goal)
+            agent = GenericAgentArgs(
+                chat_model_args=chat_model_args, 
+                flags=flags
+                ).make_agent(goal=goal)
+            
             terminated = False
             actions = []
             trial = 0

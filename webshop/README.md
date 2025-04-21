@@ -1,12 +1,17 @@
 # WebShop Experiment
 
 ## 1. Setup
+Setup the environment (encouraged to use Python 3.10)
 ```
 conda create -n webshop python==3.10
 conda activate webshop
 pip install -r requirements.txt
 ```
-* Additionally, you have to login to wandb.
+
+Additionally, you have to login to wandb.
+```
+wandb login
+```
 
 ## 2. Quick Walkthrough for Webshop
 ```python
@@ -41,40 +46,61 @@ export LLAMA_API_KEY = 'your llama api key (register in deepinfra.ai)'
 As a backbone, you may choose backbone as one of `openai/gpt-4o-2024-08-06`, `googleai/gemini-1.5-flash-002`, `anthropic/claude-3.5-sonnet-20240620`.
 * without contextualization (Raw observation)
 ```
-python src/webshop_baseline_eval.py --num_tasks 500 --backbone [backbone llm]
+python src/webshop_baseline_eval.py \
+--num_tasks 500 \
+--backbone [backbone llm]
 ```
 
 * self-contextualization
 ```
-python src/webshop_baseline_eval.py --num_tasks 500 --backbone [backbone llm] --rephrase 
+python src/webshop_baseline_eval.py \
+--num_tasks 500 \
+--backbone [backbone llm] \
+--rephrase 
 ```
 
 ### LCoW (iteraion = 1)
 
 ```
 # Sampling contextualized observations from seed demonstration
-python src/collect_data.py --backbone googleai/gemini-1.5-flash-002 --num_samples 4
+python src/collect_data.py --num_samples 4
 
 # Training contextualization module
 python src/train.py --iter 0
 
 # Evaluating LCoW (iter = 1)
-python src/webshop_lcow_eval.py --num_tasks 500 --iter 0 --ckpt_step [checkpoint step] --backbone [backbone llm]
+python src/webshop_lcow_eval.py \
+--num_tasks 500 \
+--iter 0 \ 
+--ckpt_step [checkpoint step] \
+--backbone [backbone llm]
 ```
 
 ### LCoW (iteraion > 1)
 
 ```
 # Collecting successful trajectories from training environment
-python src/traj_collection.py --backbone googleai/gemini-1.5-flash-002 --iter [iteration] --ckpt_step [checkpoint_step (prev iteration)]
+python src/traj_collection.py \
+--backbone googleai/gemini-1.5-flash-002 \
+--iter [iteration] \
+--ckpt_step [checkpoint_step (prev iteration)]
 
 # Sampling contextualized observations
-python src/collect_data_iter.py --iter [iteration] --num_samples 4 --ckpt_step [checkpoint_step (prev iteration)]
+python src/collect_data_iter.py 
+--iter [iteration] \
+--num_samples 4 \
+--ckpt_step [checkpoint_step (prev iteration)]
 
 # Training contextualization module
-python src/train.py --iter [iteration] --start_ckpt_step [checkpoint_step (prev iteration)]
+python src/train.py 
+--iter [iteration] \
+--start_ckpt_step [checkpoint_step (prev iteration)]
 
 # Evaluating LCoW (iteration > 1)
-python src/webshop_lcow_eval.py --num_tasks 500 --iter [iteration] --ckpt_step [checkpoint_step (current iteration)] --backbone [bacbone llm]
+python src/webshop_lcow_eval.py 
+--num_tasks 500 \ 
+--iter [iteration] \
+--ckpt_step [checkpoint_step (current iteration)] \
+--backbone [bacbone llm]
 ```
 

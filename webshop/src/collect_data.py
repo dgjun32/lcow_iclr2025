@@ -2,20 +2,22 @@ import os
 import time
 import json
 import concurrent
+from concurrent.futures import ThreadPoolExecutor
+
+import openai
+import torch
+import langchain
 import numpy as np
 import pandas as pd
-import torch
-from torch.utils.data import Dataset, DataLoader
-from utils import convert_obs_in_history_inputs_v2, return_meta_prompt_repr_3
-from constants import FEW_SHOT_EXAMPLES_REPR
+import google.generativeai as genai
 from tqdm import tqdm 
-from concurrent.futures import ThreadPoolExecutor
+from torch.utils.data import Dataset, DataLoader
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
-import openai
-import google.generativeai as genai
 
+from utils import convert_obs_in_history_inputs, return_self_ctx_prompt
+from constants import FEW_SHOT_EXAMPLES_REPR
 
 class TrainDataset(Dataset):
     def __init__(self):
@@ -40,9 +42,10 @@ def rephrase_model(prompt, num_candidates=4):
     api_key = os.environ['GOOGLE_API_KEY']
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-1.5-flash-002',
-                                generation_config=genai.GenerationConfig(
-                                    temperature=1.0),
-                                )
+                generation_config=genai.GenerationConfig(
+                    temperature=1.0
+                    ),
+                )
     responses = []
     for i in range(num_candidates):
         response = model.generate_content(prompt)
@@ -56,7 +59,7 @@ def format_reward_prompt(
     obs_repr
     ):
     
-    prompt = convert_obs_in_history_inputs_v2(
+    prompt = convert_obs_in_history_inputs(
         obs_history, 
         obs_repr, 
         backbone='gemini-pro'
@@ -73,8 +76,7 @@ def format_reward_prompt(
 def compute_action_matching_reward(
     obs_history, 
     obs_repr, 
-    ref_action, 
-    backbone
+    ref_action,
     ):
     
     # define action modules
@@ -96,7 +98,11 @@ def compute_action_matching_reward(
             )
     # 1. convert observations in prompt using current policy (prompt LM)
     pred_actions = []
-    action_prompt = format_reward_prompt(FEW_SHOT_EXAMPLES_REPR, obs_history, obs_repr) 
+    action_prompt = format_reward_prompt(
+        FEW_SHOT_EXAMPLES_REPR, 
+        obs_history, 
+        obs_repr
+        ) 
     action_prompt = action_prompt[:-8]+'State the next action without providing any reasoning.\n\nAction: '
 
     # 2. get reward from each action models
@@ -107,7 +113,6 @@ def compute_action_matching_reward(
             print('Retrying due to error')
             action = model_invoke(chat_messages).content
         action = action.lower().split('\n')[0].split('action:')[-1].strip()
-        #action = action.lower().split('\n')[0].split('action:')[-1].strip()
         return action, len(action_prompt) / 4.0, len(action) / 4.0
 
     # Using ThreadPoolExecutor to parallelize the tasks
@@ -135,16 +140,7 @@ def compute_action_matching_reward(
     return rewards, pred_actions
 
 
-def reward_model(obs_histories, obs_reprs, actions, backbone):
-    '''
-    model: AutoModelForCausalLM
-    tokenizer: AutoTokenizer
-    obs_reprs: [List] contextualized observation - online
-    actions: [List] action label
-    goals: [List] goal instruction
-    prev_actions: [List] str indicating previously executed actions
-    '''
-    tokens = 0
+def reward_model(obs_histories, obs_reprs, actions):
     action_matching_rewards = []
     pred_actions_list = []
     # 1. compute action matching reward
@@ -155,8 +151,7 @@ def reward_model(obs_histories, obs_reprs, actions, backbone):
             action_matching_reward_list, pred_actions = compute_action_matching_reward(
                 obs_history, 
                 obs_repr, 
-                action, 
-                backbone
+                action,
                 )
             
             action_matching_reward = sum(action_matching_reward_list)
@@ -166,7 +161,7 @@ def reward_model(obs_histories, obs_reprs, actions, backbone):
     return action_matching_rewards, pred_actions_list 
 
 
-def collect_data(backbone, eval_backbone, num_candidates):
+def collect_data(num_candidates):
     trainset = TrainDataset()
     trainloader = DataLoader(trainset, batch_size = 1, shuffle=False)
     dataset = []
@@ -193,16 +188,16 @@ def collect_data(backbone, eval_backbone, num_candidates):
             pass 
         else:
             # sample multiple rephrase candidates
-            lm_input = return_meta_prompt_repr_3(goal, obs, prev_actions)
+            lm_input = return_self_ctx_prompt(goal, obs, prev_actions)
             
-            obs_reprs = rephrase_model(lm_input, num_candidates=num_candidates) # TODO: parallelize 
+            obs_reprs = rephrase_model(lm_input, num_candidates=num_candidates)
             obs_reprs = [obs_repr.split('**rephrased observation**:')[-1] for obs_repr in obs_reprs]
+            
             # compute reward for every candidates in the candidate pool TODO: parallelize
             rewards, pred_actions_list = reward_model(
                                     [obs_history]*num_candidates,
                                     obs_reprs,
                                     [action]*num_candidates,
-                                    eval_backbone
                                     )
 
             for obs_repr, r, pred_actions in zip(obs_reprs, rewards, pred_actions_list):
@@ -214,25 +209,22 @@ def collect_data(backbone, eval_backbone, num_candidates):
             print('Predicted actions: ', pred_actions_list)
             print('total rewards:', rewards)
             dataset.append(sample)
+            
             # incrementally save collected data
             with open(f"collected_data/sampled_contextualization_iter_0.json", 'w') as f:
                 json.dump(dataset, f, indent=4)
 
-
-
-#######################################################
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='arguments for sampling contextualization data')
     
     # Add arguments
-    parser.add_argument('--backbone', type=str, default='gemini-pro', help='type of backbone LLM api')
-    parser.add_argument('--eval_backbone', type=str, default='gemini-pro', help='type of backboen LLM for Rephrase evaluation')
-    parser.add_argument('--num_samples', type=int, default=4, help='number of rephrases to be sampled by Rephraser LM')
+    parser.add_argument('--num_samples', 
+                        type=int, 
+                        default=4, 
+                        help='number of contextualized observations to be sampled by Contextualization LM')
     args = parser.parse_args()
-    print('Start collecting data!')
-    collect_data(backbone = args.backbone,
-                 eval_backbone = args.eval_backbone,
-                 num_candidates = args.num_samples)
+    print('Start collecting contextualization data!')
+    collect_data(num_candidates = args.num_samples)
     
