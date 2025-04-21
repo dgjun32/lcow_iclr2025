@@ -3,14 +3,23 @@
 ## 1. Setup
 Setup the environment (encouraged to use Python 3.10)
 ```
+cd webshop
 conda create -n webshop python==3.10
 conda activate webshop
 pip install -r requirements.txt
 ```
+Setup API keys for LLMs
+```
+export GEMINI_API_KEY = 'your googleai api key'
+export OPENAI_API_KEY = 'your openai api key'
+export ANTHROPIC_API_KEY = 'your anthropic api key'
+export LLAMA_API_KEY = 'your llama api key (register in deepinfra.ai)'
+```
 
-Additionally, you have to login to wandb.
+Additionally, you have to login to wandb and huggingface.
 ```
 wandb login
+huggingface-cli login
 ```
 
 ## 2. Quick Walkthrough for Webshop
@@ -33,14 +42,6 @@ print(obs)
 ```
 
 ## 3. Experiment 
-### Setup API keys
-```
-cd webshop
-export GEMINI_API_KEY = 'your googleai api key'
-export OPENAI_API_KEY = 'your openai api key'
-export ANTHROPIC_API_KEY = 'your anthropic api key'
-export LLAMA_API_KEY = 'your llama api key (register in deepinfra.ai)'
-```
 
 ### Evaluating baseline
 As a backbone, you may choose backbone as one of `openai/gpt-4o-2024-08-06`, `googleai/gemini-1.5-flash-002`, `anthropic/claude-3.5-sonnet-20240620`.

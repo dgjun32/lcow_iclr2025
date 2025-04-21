@@ -1,25 +1,21 @@
 # WorkArena / WebArena Experiment
 
-[[Setup]](#setup) ♦ [[Experiments]](#experiments)
-
-
-# Setup
+## Setup
 
 Note that we utilize BrowserGym interface for experiment in WorkArena and WebArena.
 For more details about BrowserGym, click this [link](https://github.com/ServiceNow/BrowserGym).
 ```
+cd browsergym
 conda create -n browsergym python==3.10
 conda activate browsergym
 pip install -r requirements.txt
-pip install browsergym
-pip install browsergym-workarena
 playwright install
 ```
-Finally, each benchmark comes with its own specific setup that requires to follow additional steps.
- - for webarena, see [webarena/README.md](https://github.com/ServiceNow/BrowserGym/blob/main/browsergym/webarena/README.md)
- - for workarena, see [WorkArena](https://github.com/ServiceNow/WorkArena)
-
-
+Additionally, you have to login to wandb and huggingface.
+```
+wandb login
+huggingface-cli login
+```
 Setup API KEYs for LLMs
 ```
 export GEMINI_API_KEY = 'your googleai api key'
@@ -27,6 +23,10 @@ export OPENAI_API_KEY = 'your openai api key'
 export ANTHROPIC_API_KEY = 'your anthropic api key'
 export LLAMA_API_KEY = 'your llama api key (register to deepinfra.ai)'
 ```
+Finally, each benchmark comes with its own specific setup that requires to follow additional steps.
+ - for webarena, see [webarena/README.md](https://github.com/ServiceNow/BrowserGym/blob/main/browsergym/webarena/README.md)
+ - for workarena, see [WorkArena](https://github.com/ServiceNow/WorkArena)
+
 
 ## Dataset
 We open-source web page contextualization dataset we collected for training the model.

@@ -1,8 +1,10 @@
 browsergym/webarena_results_fail/
 browsergym/webarena_results/
 browsergym/webarena_data/
+browsergym/webarena_src/__pycache__
 browsergym/workarena_results/
 browsergym/workarena_data/
+browsergym/workarena_src/__pycache__
 webshop/collected_data/
 webshop/results/
 .DS_Store
